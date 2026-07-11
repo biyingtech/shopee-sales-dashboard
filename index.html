@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>璧影科技 · 蝦皮銷售分析看板</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f5f7;--card:#fff;--ink:#1d1d1f;--sub:#86868b;--line:#e3e3e8;--pri:#0071e3;--pri2:#0058b9;--grn:#34c759;--amb:#ff9500;--red:#ff3b30;--vio:#ff6482;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--ink);padding:20px;font-size:14px}
+.wrap{max-width:1400px;margin:0 auto}
+.head{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 22px;box-shadow:0 4px 20px rgba(0,0,0,.06);flex-wrap:wrap}
+.logo{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,var(--pri),var(--vio));display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;flex:none}
+.htxt h1{font-size:19px;font-weight:800}
+.htxt p{color:var(--sub);font-size:12px;margin-top:2px}
+.hbtns{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#liveStatus{font-size:12px;color:var(--sub)}
+.btn{border:1px solid var(--line);background:#f8fafc;color:var(--ink);border-radius:10px;padding:9px 14px;font-size:13px;cursor:pointer;transition:.15s}
+.btn:hover{background:#eef2f7}
+.btn.pri{background:var(--pri);color:#fff;border-color:var(--pri)}
+.btn.pri:hover{background:var(--pri2)}
+.filters{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 18px;box-shadow:0 4px 20px rgba(0,0,0,.06);display:grid;grid-template-columns:repeat(3,1fr) auto;gap:12px;align-items:end}
+.fg label{display:block;font-size:12px;color:var(--sub);margin-bottom:5px}
+.fg select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:13px;color:var(--ink)}
+.kpis{margin-top:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 20px;box-shadow:0 4px 20px rgba(0,0,0,.06)}
+.kpi .t{font-size:13px;color:var(--sub)}
+.kpi .v{font-size:32px;font-weight:800;margin-top:6px;letter-spacing:-.5px}
+.kpi .s{font-size:12px;color:var(--sub);margin-top:4px}
+.kpi .v.grn{color:var(--grn)}.kpi .v.amb{color:var(--amb)}
+.grid2{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 4px 20px rgba(0,0,0,.06);margin-top:14px}
+.grid2 .panel{margin-top:0}
+.panel-h{display:flex;align-items:center;gap:8px;font-weight:700;margin-bottom:14px;font-size:15px}
+.panel-h .cnt{margin-left:auto;font-size:13px;color:var(--sub)}
+.chartbox{position:relative;height:300px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line)}
+th{color:var(--sub);font-weight:600;font-size:12px}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:linear-gradient(90deg,var(--pri),var(--vio))}
+.foot{color:var(--sub);font-size:12px;margin-top:16px;text-align:center;line-height:1.7}
+@media(max-width:820px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.filters{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="logo">🛍️</div>
+    <div class="htxt"><h1>璧影科技 · 蝦皮銷售分析看板</h1><p>資料源：合併訂單 Google Sheet · <span id="genDate"></span></p></div>
+    <div class="hbtns"><span id="liveStatus">◌ 準備中…</span><button class="btn pri" onclick="refreshLive(true)">↻ 即時更新</button></div>
+  </div>
+
+  <div class="filters">
+    <div class="fg"><label>渠道</label><select id="f_channel" onchange="applyFilters()"><option value="">全部</option></select></div>
+    <div class="fg"><label>店鋪</label><select id="f_store" onchange="applyFilters()"><option value="">全部</option></select></div>
+    <div class="fg"><label>月份</label><select id="f_month" onchange="applyFilters()"><option value="">全部</option></select></div>
+    <div class="fg"><button class="btn" onclick="resetFilters()">清除篩選</button></div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="t">總進賬金額</div><div class="v" id="k_net"></div><div class="s">買家實付扣除運費・手續費・優惠後實際入袋</div></div>
+    <div class="kpi"><div class="t">訂單數（去重）</div><div class="v" id="k_ord"></div><div class="s">含各賣場合併</div></div>
+    <div class="kpi"><div class="t">平均客單</div><div class="v grn" id="k_aov"></div><div class="s">進賬 ÷ 訂單數</div></div>
+    <div class="kpi"><div class="t">不成立率</div><div class="v amb" id="k_fail"></div><div class="s">訂單健康度警示線</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-h">📈 營收趨勢（每月進賬金額）</div>
+    <div class="chartbox"><canvas id="cTrend"></canvas></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <div class="panel-h">🏬 各店比較</div>
+      <div class="chartbox"><canvas id="cStore"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h">🥧 訂單健康度</div>
+      <div class="chartbox"><canvas id="cStatus"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-h">🔥 熱銷商品 TOP 10 <span class="cnt">依銷售筆數</span></div>
+    <table><thead><tr><th>#</th><th>商品名稱</th><th class="num">銷售筆數</th><th class="num">進賬金額</th><th style="width:22%">占比</th></tr></thead><tbody id="prodBody"></tbody></table>
+  </div>
+
+  <div class="foot">
+    離線時顯示內嵌快照（不含任何買家個資）。篩選器需即時連線後才有選項。<br>
+    © 璧影科技　電商記賬自動化
+  </div>
+</div>
+
+<script>
+/* ===== 內嵌快照（離線後備，僅彙總數字，無個資） ===== */
+const SNAP = {"generated":"2026-07-11","kpi":{"net":485123,"orders":716,"aov":677.5,"failRate":11.5},"months":[{"m":"2026-01","net":132653},{"m":"2026-02","net":45096},{"m":"2026-03","net":80210},{"m":"2026-04","net":85654},{"m":"2026-05","net":73432},{"m":"2026-06","net":68078}],"stores":[{"name":"mars.xu730","net":478009,"orders":679,"aov":704},{"name":"jin3.studio","net":7114,"orders":37,"aov":192}],"status":[{"k":"已完成","v":631},{"k":"不成立","v":82},{"k":"已送達","v":3}],"topProducts":[{"name":"〖 𝔹𝕀𝕐𝕀ℕ𝔾 〗紅光眼睛舒適護理小桌燈 亮度3級調整 L","cnt":97,"net":68821},{"name":"〖 𝔹𝕀𝕐𝕀ℕ𝔾 〗【台灣公司現貨 寵物專用光源】一年保固多","cnt":83,"net":136888},{"name":"馬歇爾音響造型 客製名字 pick收納盒 吉他撥片架 當天出","cnt":82,"net":15178},{"name":"【台灣現貨🔥】紅外線光手電筒 五燈株(460+630+660","cnt":75,"net":61229},{"name":"〖 𝔹𝕀𝕐𝕀ℕ𝔾 〗台灣現貨🔥｜660nm+850nm 雙波","cnt":68,"net":33070},{"name":"魔物獵人 鑰匙圈 可動斬斧 狩獵笛 戶外口哨 出門狩獵必戴 ","cnt":55,"net":7856},{"name":"〖 𝔹𝕀𝕐𝕀ℕ𝔾 〗台灣現貨🔥 紅光燈 紅外線燈 光作用 輕","cnt":48,"net":28047},{"name":"iPhone Standby Mode Dock DN40 ","cnt":47,"net":22686},{"name":"【台灣現貨🔥】紅外線光手電筒 (630+660+8503) ","cnt":46,"net":17975},{"name":"〖 𝔹𝕀𝕐𝕀ℕ𝔾 〗LED 全光譜環境燈｜多波長智能照明｜E","cnt":44,"net":29719}]};
+
+/* ===== 來源 Google Sheet（蝦皮分析資料源_公開安全，去識別、無個資） ===== */
+const SHEET_ID="1hR8gfPlDUx4Hx1A-fCHrIWa80hGGopPjx8R5hNupwEA", GID="595272428";
+
+const NT=n=>'NT$'+Math.round(n).toLocaleString('en-US');
+const $=id=>document.getElementById(id);
+let charts={};
+function mk(id,cfg){ if(charts[id])charts[id].destroy(); charts[id]=new Chart($(id),cfg); }
+function bucket(s){ s=s||''; if(s.indexOf('不成立')>=0)return '不成立'; if(s.indexOf('已送達')>=0)return '已送達'; return '已完成'; }
+
+let RAW=null;   // 即時連線後的原始列（供篩選）
+
+function render(D){
+  $('genDate').textContent=D.generated?('更新 '+D.generated):'';
+  $('k_net').textContent=NT(D.kpi.net);
+  $('k_ord').textContent=(D.kpi.orders||0).toLocaleString();
+  $('k_aov').textContent=NT(D.kpi.aov||0);
+  $('k_fail').textContent=(D.kpi.failRate||0)+'%';
+
+  mk('cTrend',{type:'line',data:{labels:D.months.map(x=>x.m),datasets:[{label:'進賬金額',data:D.months.map(x=>x.net),borderColor:'#0071e3',backgroundColor:'rgba(0,113,227,.12)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:'#0071e3',borderWidth:2.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>NT(c.parsed.y)}}},scales:{y:{ticks:{callback:v=>(v/10000)+'萬'}}}}});
+
+  mk('cStore',{type:'bar',data:{labels:D.stores.map(x=>x.name),datasets:[{label:'進賬金額',data:D.stores.map(x=>x.net),backgroundColor:['#0071e3','#ff6482','#34c759','#ff9500'],borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>NT(c.parsed.y)}}},scales:{y:{ticks:{callback:v=>(v/10000)+'萬'}}}}});
+
+  const cmap={'已完成':'#34c759','已送達':'#0071e3','不成立':'#ff3b30'};
+  mk('cStatus',{type:'doughnut',data:{labels:D.status.map(x=>x.k),datasets:[{data:D.status.map(x=>x.v),backgroundColor:D.status.map(x=>cmap[x.k]||'#86868b'),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'right'}}}});
+
+  const mx=Math.max.apply(null,D.topProducts.map(p=>p.cnt))||1;
+  $('prodBody').innerHTML=D.topProducts.map((p,i)=>
+    '<tr><td>'+(i+1)+'</td><td>'+p.name+'</td><td class="num">'+p.cnt+'</td><td class="num">'+NT(p.net)+'</td>'+
+    '<td><div class="bar" style="width:'+(p.cnt/mx*100).toFixed(0)+'%"></div></td></tr>').join('')
+    || '<tr><td colspan="5" style="color:var(--sub);text-align:center;padding:20px">此篩選條件下無資料</td></tr>';
+}
+
+/* ===== 篩選 ===== */
+function distinct(a){ return [...new Set(a)].filter(x=>x).sort(); }
+function fillSel(id,vals){ const s=$(id),cur=s.value; s.innerHTML='<option value="">全部</option>'+vals.map(v=>'<option>'+v+'</option>').join(''); s.value=cur; }
+function populateFilters(){ if(!RAW)return; fillSel('f_channel',distinct(RAW.map(r=>r.channel))); fillSel('f_store',distinct(RAW.map(r=>r.store))); fillSel('f_month',distinct(RAW.map(r=>r.ym))); }
+function resetFilters(){ $('f_channel').value=''; $('f_store').value=''; $('f_month').value=''; applyFilters(); }
+function applyFilters(){
+  if(!RAW)return;   // 尚未即時連線時，維持快照畫面
+  const fc=$('f_channel').value, fs=$('f_store').value, fm=$('f_month').value;
+  const rows=RAW.filter(r=>(!fc||r.channel===fc)&&(!fs||r.store===fs)&&(!fm||r.ym===fm));
+  render(computeAgg(rows));
+}
+function computeAgg(rows){
+  let net=0,orders=0,fails=0; const mMap={},sMap={},stMap={},pMap={};
+  for(const r of rows){
+    if(r.product){ if(!pMap[r.product])pMap[r.product]={cnt:0,net:0}; pMap[r.product].cnt++; if(r.net!=null)pMap[r.product].net+=r.net; }
+    if(r.net==null)continue;
+    net+=r.net; orders++; if(r.status==='不成立')fails++;
+    if(r.ym)mMap[r.ym]=(mMap[r.ym]||0)+r.net;
+    if(r.store){ if(!sMap[r.store])sMap[r.store]={net:0,orders:0}; sMap[r.store].net+=r.net; sMap[r.store].orders++; }
+    stMap[r.status]=(stMap[r.status]||0)+1;
+  }
+  return { generated:LIVE_TS,
+    kpi:{net:net,orders:orders,aov:orders?net/orders:0,failRate:orders?+(100*fails/orders).toFixed(1):0},
+    months:Object.keys(mMap).sort().map(m=>({m:m,net:mMap[m]})),
+    stores:Object.keys(sMap).map(n=>({name:n,net:sMap[n].net,orders:sMap[n].orders,aov:Math.round(sMap[n].net/sMap[n].orders)})).sort((a,b)=>b.net-a.net),
+    status:['已完成','已送達','不成立'].filter(k=>stMap[k]).map(k=>({k:k,v:stMap[k]})),
+    topProducts:Object.keys(pMap).map(n=>({name:n.slice(0,30),cnt:pMap[n].cnt,net:pMap[n].net})).sort((a,b)=>b.cnt-a.cnt).slice(0,10) };
+}
+
+/* ===== 即時更新：gviz JSONP ===== */
+function setLive(t,c){ const b=$('liveStatus'); if(b){b.textContent=t; b.style.color=c||'';} }
+let _seq=0, LIVE_TS='';
+function refreshLive(manual){
+  const seq=++_seq, cb="__gviz_"+seq; let done=false;
+  setLive('◌ 即時讀取中…','');
+  const s=document.createElement('script');
+  const timer=setTimeout(()=>{ if(!done){cleanup(); fail('逾時');} },25000);
+  function cleanup(){ clearTimeout(timer); try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode)s.parentNode.removeChild(s); }
+  window[cb]=function(resp){ if(seq!==_seq)return; done=true; cleanup(); try{ apply(resp); }catch(e){ fail('解析錯誤'); } };
+  s.onerror=function(){ if(done)return; cleanup(); fail('連線被擋 / 未公開'); };
+  s.src="https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/gviz/tq?gid="+GID+"&headers=1&tqx=reqId:"+seq+";responseHandler:"+cb;
+  document.head.appendChild(s);
+}
+function fail(r){ setLive('⚠ 即時更新失敗（'+r+'）· 顯示內嵌快照','#d97706'); }
+
+function apply(resp){
+  if(!resp||resp.status==='error'){ fail('查詢失敗'); return; }
+  const cols=resp.table.cols, rows=resp.table.rows||[];
+  const lab=i=>(cols[i].label||'').replace(/\s+/g,'');
+  const FI=(...ks)=>{ for(let i=0;i<cols.length;i++){ const l=lab(i); if(ks.every(k=>l.indexOf(k)>=0))return i; } return -1; };
+  const cDate=FI('訂單日期'),cChan=FI('渠道'),cStore=FI('賣場'),cStatus=FI('訂單狀態'),cProd=FI('商品名稱'),cNet=FI('進賬金額');
+  const gv=(row,c)=>{ if(c<0||!row.c||!row.c[c])return null; return row.c[c].v; };
+  const ym=v=>{ if(v==null)return ''; const s=String(v); let m=s.match(/Date\((\d+),(\d+),/); if(m)return m[1]+'-'+String(+m[2]+1).padStart(2,'0'); m=s.match(/(\d{4})-(\d{1,2})/); return m?m[1]+'-'+m[2].padStart(2,'0'):''; };
+  const S=v=>v==null?'':String(v).trim();
+
+  const out=[];
+  for(const row of rows){
+    const nvRaw=gv(row,cNet);
+    const hasNet=!(nvRaw==null||nvRaw===''); // 進賬金額有值 = 訂單首列（訂單層級）
+    out.push({ ym:ym(gv(row,cDate)), channel:S(gv(row,cChan)), store:S(gv(row,cStore)),
+      status:bucket(S(gv(row,cStatus))), product:S(gv(row,cProd)), net:hasNet?(+nvRaw||0):null });
+  }
+  if(!out.some(r=>r.net!=null)){ fail('回應無資料'); return; }
+  RAW=out;
+  LIVE_TS=new Date().toLocaleString('zh-TW',{hour12:false});
+  populateFilters();
+  applyFilters();
+  setLive('✓ 已連線 · 更新於 '+new Date().toLocaleTimeString('zh-TW',{hour12:false}),'#047857');
+}
+
+/* 啟動：先畫內嵌快照，再嘗試即時連線 */
+render(SNAP);
+setLive('◌ 顯示內嵌快照','');
+refreshLive(false);
+</script>
+</body>
+</html>
