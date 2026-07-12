@@ -41,6 +41,24 @@ th{color:var(--sub);font-weight:600;font-size:12px}
 th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
 .bar{height:8px;border-radius:4px;background:linear-gradient(90deg,var(--pri),var(--vio))}
 .foot{color:var(--sub);font-size:12px;margin-top:16px;text-align:center;line-height:1.7}
+.sechd{margin:34px 0 16px;padding-top:24px;border-top:1px solid var(--line)}
+.sechd h2{margin:0;font-size:20px;letter-spacing:-.4px}
+.sechd p{margin:5px 0 0;color:var(--sub);font-size:12px}
+.panel.warn{border-color:#fca5a5;background:#fff7f7}
+.hint{color:var(--sub);font-size:11px;margin:10px 2px 0;line-height:1.6}
+td.neg{color:#dc2626;font-weight:700}
+td.pos{color:#059669;font-weight:600}
+.lock{text-align:center;padding:34px 20px}
+.lock-i{font-size:40px;line-height:1}
+.lock-t{font-size:17px;font-weight:800;margin-top:10px}
+.lock-s{font-size:12px;color:var(--sub);margin-top:8px;line-height:1.7}
+.lock-f{margin-top:18px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.lock-f input{width:230px;padding:11px 14px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;color:var(--ink)}
+.lock-f input:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 3px rgba(0,113,227,.12)}
+.lock-f button{background:var(--pri);color:#fff;border:none;border-radius:10px;padding:11px 22px;font-size:14px;font-weight:600;cursor:pointer}
+.lock-f button:hover{background:var(--pri2)}
+.lock-f button:disabled{opacity:.5;cursor:default}
+.lock-e{color:#dc2626;font-size:13px;margin-top:12px;min-height:18px}
 @media(max-width:820px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.filters{grid-template-columns:1fr}}
 </style>
 </head>
@@ -87,8 +105,69 @@ th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
     <table><thead><tr><th>#</th><th>商品名稱</th><th class="num">銷售筆數</th><th class="num">進賬金額</th><th style="width:22%">占比</th></tr></thead><tbody id="prodBody"></tbody></table>
   </div>
 
+  <!-- ══════════ 利潤分析（加密快照，需密碼解鎖） ══════════ -->
+  <div class="sechd">
+    <h2>🔒 利潤分析</h2>
+    <p>成本與毛利屬商業機密，資料以 AES-256-GCM 加密內嵌，需密碼解鎖 · 產出日 <span id="pDate">—</span>　<b>2026 上半年</b></p>
+  </div>
+
+  <div class="panel" id="profitLock">
+    <div class="lock">
+      <div class="lock-i">🔒</div>
+      <div class="lock-t">利潤資料已加密</div>
+      <div class="lock-s">此區塊包含商品成本與毛利，僅限授權人員檢視。<br>沒有密碼的人即使檢視原始碼也只會看到密文。</div>
+      <form class="lock-f" id="lockForm" autocomplete="off">
+        <input type="password" id="pw" placeholder="請輸入密碼" autocomplete="current-password">
+        <button type="submit" id="pwBtn">解鎖</button>
+      </form>
+      <div class="lock-e" id="pwErr"></div>
+    </div>
+  </div>
+
+  <div id="profitBody" hidden>
+  <div class="kpis">
+    <div class="kpi"><div class="t">總毛利</div><div class="v grn" id="p_gp"></div><div class="s">實收進賬 − 商品成本</div></div>
+    <div class="kpi"><div class="t">毛利率</div><div class="v grn" id="p_gpr"></div><div class="s">每入袋 100 元有多少是毛利</div></div>
+    <div class="kpi"><div class="t">商品成本</div><div class="v" id="p_cost"></div><div class="s">3D 料工費 + 紅光進貨</div></div>
+    <div class="kpi"><div class="t">退貨損失</div><div class="v amb" id="p_ret"></div><div class="s">退貨運費（純支出）</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-h">💧 錢跑到哪去了 <span class="cnt">標價 → 毛利 逐層拆解</span></div>
+    <div class="chartbox"><canvas id="cWater"></canvas></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-h">📈 月度毛利與毛利率</div>
+    <div class="chartbox"><canvas id="cGpTrend"></canvas></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <div class="panel-h">🧩 商品類型毛利率</div>
+      <div class="chartbox"><canvas id="cType"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h">🏬 各店毛利率</div>
+      <div class="chartbox"><canvas id="cStoreGp"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-h">🏆 毛利貢獻 TOP 10 <span class="cnt">賺最多錢的商品，不一定是賣最多的</span></div>
+    <table><thead><tr><th>#</th><th>商品</th><th class="num">實收進賬</th><th class="num">毛利</th><th class="num">毛利率</th><th style="width:20%">貢獻占比</th></tr></thead><tbody id="gpBody"></tbody></table>
+  </div>
+
+  <div class="panel warn">
+    <div class="panel-h">⚠️ 低毛利／虧本警示 <span class="cnt">毛利率 &lt; 40%，規格層級</span></div>
+    <table><thead><tr><th>商品 / 規格</th><th class="num">件數</th><th class="num">實收進賬</th><th class="num">毛利</th><th class="num">毛利率</th></tr></thead><tbody id="lowBody"></tbody></table>
+    <p class="hint">虧本通常只出在「某一個顏色或規格」，總品名層級會被平均掉看不出來 → 這裡拆到規格。</p>
+  </div>
+  </div><!-- /profitBody -->
+
   <div class="foot">
-    離線時顯示內嵌快照（不含任何買家個資）。篩選器需即時連線後才有選項。<br>
+    銷售區塊：即時連線公開 Sheet（去識別，不含買家個資）；離線時顯示內嵌快照。<br>
+    利潤區塊：AES-256-GCM 加密快照，需密碼解鎖。執行 <code>merge_orders.py</code> → <code>gen_profit_snapshot.py</code> → <code>build_dashboard.py</code> 後更新。<br>
     © 璧影科技　電商記賬自動化
   </div>
 </div>
@@ -203,6 +282,93 @@ function apply(resp){
 render(SNAP);
 setLive('◌ 顯示內嵌快照','');
 refreshLive(false);
+
+/* ═══════════ 利潤分析（離線快照；成本屬機密，不放公開 Sheet） ═══════════ */
+const PROFIT_ENC = "HwMLn8GkoyCwyyCLn1xa0/mTJ6kDuS4WtfticgBHKLii0daulRxvzFEWvEifaI2Hxp3LPHeLuS12/EU8XAucsSbNx6E4v1v+0V3INr+SVZ9ZymqNeWNbBCBgXBnIsgV+AS50aeSk2LvoUyrXqeDz8NVnvmiDpr3JzJ0/ybjvSQCcy+3FwekUm2ZiXnLsdR7RBiabLPs35rNTh5QjXn07Oos4jcypUAxY3FWxLWvXM/iKni/dTRQLZmwhYS4Hqjc9cAE8BW5ON5fJfd/5tXgzAL5JdyRHsrTMRfu0e9F+VzBTngN0oJLUOAFEuR+mH26WBhDrqtUpYERJ0lj+Y4bJes6E/K/lMjRnFcR+Cbwkf+PkESw8KVAF21nXsDcQgNLysdwtEaerfPdM/bMLKNi7QWy7fx/VgSPfffR3EzeSaagmvC7iKwkUhfPh4DYHphn4ot3lgGF+HMEPuULTdOHVWJ2KmSRGNad0wKljrX6L+alrI6q0LVa2JqaRkXchHI4hvqjWiqPmQBIf1vS6+KrP5NrbqS9lksaTG2wTANF02RcsThkfUPqCobheuXidAf3RskNHkdZPpdvZkfYfkLi8GlYorLZb6Gr8z1LdwwJteYmw2c8wLxHwgrFKQwZefWWRHFBya0rBj5RRfyBgkhZZXxMH0eLIEEnBze8Td/netWdKUsWUAnc0eYvABj/aMS87UN9GSyqbyygUlxec30Y6W4vv5C0PA20Z33Z0f3DnRX+XlyMzE6tfqoyG+iQOleAAPEccZftlm5HCa7/g71RJ3JV6rih3rJXtxk/dpH92bGXbhFsHBzf5h2bc5IEXiVsvXtpG5bOCkThJnRBUGsDIapPjsltkG7vCHilE4fc9aue4OTyG+GVA1OHeA4L3eMhaFB3XKXcj/u1I4Jku+1qjyY2jhY84CxL+SVI0k/ofl2jGdRkFGr4CkpsNd42c+lr8OOy+Q8Z3BWdOzUDBD7VSvxEjZ2vc2YBEv1DAFfozaxcHAsPKGzldjE3+N1QcWRKgqNGvLR74dI0lK67ca/4qRxHvtbZP8bKrqEWhih3ju6n0TgfxXWocNTriiHHBEWx6Y5RwY66oN45O1LjbJ5JY98reoQh8xm1xW52stEkXjrl23YnZWhqGTCQEWu4Fv8gy5ITq4p8+5ByHmavitrmlZq8tWlyPlPyAMOGWSOK27herRW+eifsTiCNqUY77ZTkcBbhvTvZ2XucYe2gMaBLD/WzNj6Mz1FeMxzD+XH0BA0EAjtJngbtaA+8SdaOpflhWi3tZWmH/JdQLLQ5Yrx8xjA11ub06bzN5kokoPwlSzoF3LvBoV39xkL4NTxaMNnfQcNbsXeosjfR4pyQf7qtBHXPaF6k6iLJYVddmS8s7lHvNkr6f3OULbO9WKMmuwrETJD3JKlhYl593b9RNrBO+ebEPz338TyzmHQ8N2ZYUGH+yMPGAQfEoF//Vuq6geSghoPLEaEQFMfIP7pa+1IlPDZP78zlvHRr1dkmQPdzmUHZCoLBO9hJNQHMod3GgJgyWhbeDa7M+7/H0Je13jwnWhnxJ+q9BqWD4Lop3Fm2y8GLK9LtXufVdJGzbKWHEFVshI2UpPQKRJmMmdQMQN0MBLwBCtIPEF4g56KB8wHOrKn2JA/+vLd+1t24eOFlL/1+MDFl6BdcyYGE4qIkhE+1tfTuQ7J84DAA6MEGlQg0nH4uwnWVyJSAZb4zy7bJYzn3Pzd5giDyLVADwPnwqRdyQV9mvq1pWrvCdvXIuKrnKVhKZgC3xlGfaDRYKdXfGUCMbKLLPvBU4J6bvy57RIkCvDcZXTXtoU572/p7Jz4HjAVkuAqcyGhfhCDHU4BdGK+JmxqeLLV8I3M5/Kt20FtmT9/WrQ0p9dEedy5kTZmwEUF7yzerIN4eEPfGtLetrs3wDuSn15kG6wXamhslLipt8+fg+4gHMfJubgi9EZW2PuhTnwR6a78b7gCfynImMFFwsJCgcOwOuhTaI1DsMECiQ9vf6AlWcgswe0/iAnWwCp2p4BkIRyAZh0mB+ab9Uzij5R8HcsV8j/sRzy9YVWjyRNBt3DKfbKebj3Cf37wSQR2AVyHjO8eoQqnt9pOZTy0mBgfyeFUm5tuFmDSHgJvlOM+e/WnMdS5kIUNa2OPV5MjirU9b+EQzKu9GyJgQz7T47H7J7Lq1TVp4VbripRtLovlbF8xKgiFuILKM9IArGbEFdlhBxx/IkGpTqc5pEjre8d3e+eNqxnm9zRziUGTZCY5lN+VJpISNwBS+DLsJnFT/YthHfQ4c/3lhPg64ymeHVpXOFo2R6c8mrWw20JvrSXeFlkormspkg721ZCt13TRga6xeut4PKWD8n9ooPquXONCscCZKJoRtPhjvGaZnU7LF4tCybuQD2A2FTajfrfPSU0uUv+50ODMOshWdWPmm6Dg1fco7cJ9hpjvMF9wqfHTZZeJruZEKnzgLzDvWmWcx3Ej24BddjfebJATsMqEwlamzhrNNV9KApYlsOsi8X0gufobGpOEWNaf1zwk7yvnl0kTj6wAJXjTIXgDuzoxmO8fj6hTNRwJSpSmnpm+lgGLcoafNiuu/mmyUCICwUnCuHz8rZ/9hbylA0somgKmU4igyF5TqWSuQsztiErumeDkq5r6CFCI8BLJ+zlIp/IoncUbd+0E42NjcmitAGypvYzuv1aEbCICRmLXlqeam7kmcxOC+9J5KAQEwz4LHCFvj66v5cmT4sE3TbHct0mIUuuf3TcaMa1LrzrZ7rpv04jyxfvdGXRZUnpOjgiV24kUyF+2QBCJpyWqkfjmeSabohC4l7gTiW9rrzVf8Xz2o8uHDC5GTc56RlCILia3VaS73Co8ea21oVotfVagDPox1Y9eJPV2YZmLn1Bf/ak8fhxMybtYEfBv5xqwMdBg/hhp51dTLmhwHypZa/gGDeLPiPdGggQOJecvCDoOdyt8pp+jX5My1IDO/iauXS+V+mUkRIYf56uEL9s9e02vDVxhtfp7bbMtbHtMI8dxPlqvrpIiE1lP8+TnorMYSsWkpee1ORuz5+q9zSyl8SH6WQG4faO5r3U6+InQKFqW54czeXgk3spGA8MTXIYBGfHQZ5Wz2FIu1K6kGFCiv1Wy1rOWlzYC3zHge7J4Y+LgSyUJbLfF/w67ygj4oJdk93kK+q+9dC9YyoYdZhIPLhfwFoJUCVO/VljNqDKZ1bOo0gCqTOZO4xxcRPEyoVxz44y7dzuBZyQGbgFOFEhaVrA/P+zWgRPMU7nywiD3n9YarcYIqDThS8lywNDPuGUfWAnVvO6YvXMoa1Laty2oGBM8ZvSdp7rmRWXfzXQUvdTpvs+ZjPzLBMD1Tmx/3/186bUP65FYbYNqtwQvls9Z8dOicWVupjgwM/s8a47J7E5b79ra6bWHzBSfoEgwbwFIsIfLZYq23Z7AEhLk4lnJj1rWNB5klx9andePVLhgYcZSELKM/S7F6KnCPpLkVRMz/yh6nsaZdFWGJAzDM5QYSrOigyx4uoCu8g5NpchR6CIq3VSALcHaxqtX/ip2vv94BDCfoQ2OKT4HGYP3raxpLaqxtBMTjF+b2cUAfakx1LxFG1QJ0XLTa39BXHwgJhrNI/tbZYRV2yXgpazY0v+DziagnLzrLQeZZCGZPtixMoW5G3HKAiK/Pu/o0a69uknwnAKR7DMvspzDi/GuhneM4BUXpMmkVlMoCMvTMTWLs4FWDBLqwg/n48/l011RSbssdeWu1oktTKO9ThGhu/FVuiYdqM324z2+3NmzIio5BqD5KpZ9KdchXMMk+L5VZ8Z/eFC79M0WD12fjtrcccugqc6lmqCHC1ZBITTs/MNrym4js/0kSeMT1AMOZAzPGPkFizu+amVKI9DypPQAOTht8Zco1G8sxxZx6Zcbj4iEA3tc9ZdnDoDdm+vHqFn6dG9mTxm8y0tHL37snw+M4hcagno8eRT3GewDQg35NxYYgVHDLVGHAKxQ9AWjspocd/4yuPKDMtdPwVObYdYUEmPsnEBvZe5vEN7E6wOR0vRKQdzPNI4ypovB3V847IZlxW7o1Hvd3p6gWfhwabUnD3mwz4XTsN4Hfl/Nhj1w2SngGQ4EOdk1Gb5Cc7r6t9zlu2iTQukOu4eP0bzJN188goiw44tj/FSfzj7UzO0Rd63aJBm0uCsJk+k10fqM35vPgY9RyR8CcnQN/6XzD5pjvlcU+0aPlh8LXmFCQtBT4wsrUeLfX7qrdl5ZyMaxjC84DbLD3cCzGuhgE5dD24FDkQjgz59LeB9Yk64ZGQTClufAZpg58J1XfAjX/J3/DLR1c6aMY2Ec9CpDzZXakndsH2lgeEH1qdBZ9OnxmcfXMDegIXfbo=";   /* AES-256-GCM 密文（PBKDF2-SHA256 310k）。build_dashboard.py 產生，明文絕不進 repo */
+
+function renderProfit(PROFIT){
+  const P=PROFIT, k=P.kpi;
+  $('pDate').textContent=P.generated;
+  $('p_gp').textContent=NT(k.gp);
+  $('p_gpr').textContent=k.gpr.toFixed(1)+'%';
+  $('p_cost').textContent=NT(k.cost);
+  $('p_ret').textContent=NT(k.rs)+' / '+k.ret+'件';
+
+  /* 瀑布：用浮動長條 [起,迄] 表現逐層侵蝕 */
+  const W=P.waterfall, bars=[], cols=[]; let cur=0;
+  W.forEach(x=>{
+    if(x.k==='實收進賬'||x.k==='毛利'){ bars.push([0,x.v]); cols.push(x.k==='毛利'?'#059669':'#0071e3'); cur=x.v; }
+    else if(x.v<0){ bars.push([cur+x.v,cur]); cols.push('#f59e0b'); cur=cur+x.v; }
+    else { bars.push([0,x.v]); cols.push('#94a3b8'); cur=x.v; }
+  });
+  mk('cWater',{type:'bar',data:{labels:W.map(x=>x.k),datasets:[{data:bars,backgroundColor:cols,borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>NT(W[c.dataIndex].v)}}},
+      scales:{y:{ticks:{callback:v=>(v/1000)+'k'},grid:{color:'#f0f0f2'}},x:{grid:{display:false},ticks:{font:{size:11}}}}}});
+
+  /* 月度：進賬/成本堆疊 + 毛利率折線 */
+  mk('cGpTrend',{type:'bar',data:{labels:P.months.map(m=>m.k),datasets:[
+      {label:'毛利',data:P.months.map(m=>m.gp),backgroundColor:'#059669',borderRadius:5,stack:'s',order:2},
+      {label:'商品成本',data:P.months.map(m=>m.cost),backgroundColor:'#cbd5e1',borderRadius:5,stack:'s',order:2},
+      {label:'毛利率',data:P.months.map(m=>m.gpr),type:'line',yAxisID:'y1',borderColor:'#dc2626',
+       backgroundColor:'#dc2626',tension:.35,pointRadius:4,borderWidth:2,order:1}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},
+      tooltip:{callbacks:{label:c=>c.dataset.label+'：'+(c.dataset.label==='毛利率'?c.parsed.y+'%':NT(c.parsed.y))}}},
+      scales:{y:{stacked:true,ticks:{callback:v=>(v/1000)+'k'},grid:{color:'#f0f0f2'},title:{display:true,text:'實收進賬 = 毛利 + 成本'}},
+        y1:{position:'right',min:0,max:100,ticks:{callback:v=>v+'%'},grid:{display:false}},
+        x:{stacked:true,grid:{display:false}}}}});
+
+  const gpBar=(id,arr)=>mk(id,{type:'bar',data:{labels:arr.map(x=>x.k),datasets:[
+      {label:'毛利',data:arr.map(x=>x.gp),backgroundColor:'#059669',borderRadius:5,stack:'s'},
+      {label:'商品成本',data:arr.map(x=>x.cost),backgroundColor:'#cbd5e1',borderRadius:5,stack:'s'}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},
+      tooltip:{callbacks:{afterBody:c=>'毛利率 '+arr[c[0].dataIndex].gpr+'%'}}},
+      scales:{x:{stacked:true,ticks:{callback:v=>(v/1000)+'k'},grid:{color:'#f0f0f2'}},y:{stacked:true,grid:{display:false}}}}});
+  gpBar('cType',P.byType); gpBar('cStoreGp',P.byStore);
+
+  const mx=Math.max(...P.topGP.map(x=>x.gp));
+  $('gpBody').innerHTML=P.topGP.map((x,i)=>
+    '<tr><td>'+(i+1)+'</td><td>'+x.k+'</td><td class="num">'+NT(x.real)+'</td>'+
+    '<td class="num pos">'+NT(x.gp)+'</td><td class="num">'+x.gpr.toFixed(1)+'%</td>'+
+    '<td><div class="bar" style="width:'+Math.round(x.gp/mx*100)+'%"></div></td></tr>').join('');
+
+  $('lowBody').innerHTML = P.lowGP.length ? P.lowGP.map(x=>
+    '<tr><td>'+x.k+'</td><td class="num">'+x.qty+'</td><td class="num">'+NT(x.real)+'</td>'+
+    '<td class="num '+(x.gp<0?'neg':'')+'">'+NT(x.gp)+'</td>'+
+    '<td class="num '+(x.gpr<0?'neg':'')+'">'+x.gpr.toFixed(1)+'%</td></tr>').join('')
+    : '<tr><td colspan="5" style="color:var(--sub)">沒有毛利率低於 40% 的規格 🎉</td></tr>';
+}
+
+/* ═══ 解鎖：PBKDF2-SHA256(310k) → AES-256-GCM ═══ */
+const b64d=b=>Uint8Array.from(atob(b),c=>c.charCodeAt(0));
+async function unlock(pw){
+  const raw=b64d(PROFIT_ENC);
+  const salt=raw.slice(0,16), iv=raw.slice(16,28), ct=raw.slice(28);
+  const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
+  const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:310000,hash:'SHA-256'},km,
+    {name:'AES-GCM',length:256},false,['decrypt']);
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,ct);   // 密碼錯 → GCM 驗證失敗，直接 throw
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+$('lockForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const btn=$('pwBtn'), err=$('pwErr');
+  btn.disabled=true; btn.textContent='解密中…'; err.textContent='';
+  try{
+    const P=await unlock($('pw').value);
+    $('profitLock').remove();
+    $('profitBody').hidden=false;
+    renderProfit(P);
+    sessionStorage.setItem('bk',$('pw').value);      // 只存本次分頁，關掉就沒了
+  }catch(_){
+    err.textContent='密碼錯誤，無法解密。';
+    btn.disabled=false; btn.textContent='解鎖'; $('pw').value=''; $('pw').focus();
+  }
+});
+/* 同一分頁內重整不用再輸一次 */
+(async()=>{ const c=sessionStorage.getItem('bk'); if(!c)return;
+  try{ const P=await unlock(c); $('profitLock').remove(); $('profitBody').hidden=false; renderProfit(P); }
+  catch(_){ sessionStorage.removeItem('bk'); } })();
 </script>
 </body>
 </html>
