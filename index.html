@@ -159,9 +159,16 @@ td.pos{color:#059669;font-weight:600}
   </div>
 
   <div class="panel warn">
-    <div class="panel-h">⚠️ 低毛利／虧本警示 <span class="cnt">毛利率 &lt; 40%，規格層級</span></div>
-    <table><thead><tr><th>商品 / 規格</th><th class="num">件數</th><th class="num">實收進賬</th><th class="num">毛利</th><th class="num">毛利率</th></tr></thead><tbody id="lowBody"></tbody></table>
-    <p class="hint">虧本通常只出在「某一個顏色或規格」，總品名層級會被平均掉看不出來 → 這裡拆到規格。</p>
+    <div class="panel-h">⚠️ 毛利率最低 10 名 <span class="cnt">規格層級 · 定價檢討清單</span></div>
+    <table><thead><tr><th>商品 / 規格</th><th class="num">件數</th><th class="num">平均售價</th><th class="num">平均進賬</th><th class="num">單位成本</th><th class="num">毛利</th><th class="num">毛利率</th></tr></thead><tbody id="lowBody"></tbody></table>
+    <p class="hint">
+      以下三欄都是<b>「一件」</b>的金額，方便直接思考定價：<br>
+      <b>平均售價</b>＝買家平均一件付多少（已扣運費，含折扣與優惠券）｜
+      <b>平均進賬</b>＝再扣掉蝦皮手續費後，一件真正入袋多少｜
+      <b>單位成本</b>＝一件的料工費或進貨價。<br>
+      <b>平均進賬 − 單位成本 ＝ 每賣一件賺多少；小於 0 就是每賣一件虧一件。</b><br>
+      虧本常常只出在「某一個顏色或規格」，總品名層級會被平均掉看不出來 → 所以這裡拆到規格。
+    </p>
   </div>
   </div><!-- /profitBody -->
 
@@ -351,11 +358,15 @@ function renderProfit(PROFIT){
     '<td class="num pos">'+NT(x.gp)+'</td><td class="num">'+x.gpr.toFixed(1)+'%</td>'+
     '<td><div class="bar" style="width:'+Math.round(x.gp/mx*100)+'%"></div></td></tr>').join('');
 
+  const U=n=>(n==null?'—':n.toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1}));
   $('lowBody').innerHTML = P.lowGP.length ? P.lowGP.map(x=>
-    '<tr><td>'+x.k+'</td><td class="num">'+x.qty+'</td><td class="num">'+NT(x.real)+'</td>'+
+    '<tr><td>'+x.k+'</td><td class="num">'+x.qty+'</td>'+
+    '<td class="num">'+U(x.uDisc)+'</td>'+
+    '<td class="num">'+U(x.uReal)+'</td>'+
+    '<td class="num '+(x.uCost>x.uReal?'neg':'')+'">'+U(x.uCost)+'</td>'+
     '<td class="num '+(x.gp<0?'neg':'')+'">'+NT(x.gp)+'</td>'+
-    '<td class="num '+(x.gpr<0?'neg':'')+'">'+x.gpr.toFixed(1)+'%</td></tr>').join('')
-    : '<tr><td colspan="5" style="color:var(--sub)">沒有毛利率低於 40% 的規格 🎉</td></tr>';
+    '<td class="num '+(x.gpr<40?'neg':'')+'">'+x.gpr.toFixed(1)+'%</td></tr>').join('')
+    : '<tr><td colspan="7" style="color:var(--sub)">無資料</td></tr>';
 }
 
 /* ═══ 解鎖：PBKDF2-SHA256(310k) → AES-256-GCM ═══ */
