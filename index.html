@@ -108,7 +108,7 @@ td.pos{color:#059669;font-weight:600}
   <!-- ══════════ 利潤分析（加密快照，需密碼解鎖） ══════════ -->
   <div class="sechd">
     <h2>🔒 利潤分析</h2>
-    <p>成本與毛利屬商業機密，資料以 AES-256-GCM 加密內嵌，需密碼解鎖 · 產出日 <span id="pDate">—</span>　<b>2026 上半年</b></p>
+    <p>成本與毛利屬商業機密：資料以 AES-256-GCM 加密後存放於資料源，需密碼才能在你的瀏覽器中解開 · 產出日 <span id="pDate">—</span>　<b>2026 上半年</b></p>
   </div>
 
   <div class="panel" id="profitLock">
@@ -167,7 +167,7 @@ td.pos{color:#059669;font-weight:600}
 
   <div class="foot">
     銷售區塊：即時連線公開 Sheet（去識別，不含買家個資）；離線時顯示內嵌快照。<br>
-    利潤區塊：AES-256-GCM 加密快照，需密碼解鎖。執行 <code>merge_orders.py</code> → <code>gen_profit_snapshot.py</code> → <code>build_dashboard.py</code> 後更新。<br>
+    利潤區塊：AES-256-GCM 加密後存於資料源「利潤密文」分頁，每月自動更新，本頁無需重新部署。<br>
     © 璧影科技　電商記賬自動化
   </div>
 </div>
@@ -284,7 +284,26 @@ setLive('◌ 顯示內嵌快照','');
 refreshLive(false);
 
 /* ═══════════ 利潤分析（離線快照；成本屬機密，不放公開 Sheet） ═══════════ */
-const PROFIT_ENC = "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";   /* AES-256-GCM 密文（PBKDF2-SHA256 310k）。build_dashboard.py 產生，明文絕不進 repo */
+/* 密文不再內嵌，改由公開 Sheet 的「利潤密文」分頁即時抓取。
+   → index.html 變成靜態檔，每月更新利潤不需要重新部署。
+   → 密文放公開 Sheet 是安全的：沒密碼的人拿到的只是亂碼。 */
+const ENC_SHEET = "利潤密文";
+let PROFIT_ENC = null;
+
+function fetchEnc(){
+  return new Promise((ok,no)=>{
+    const cb='encCb'+Date.now();
+    window[cb]=r=>{
+      delete window[cb]; sc.remove();
+      try{ ok(r.table.rows[0].c[0].v); }catch(e){ no(new Error('密文分頁是空的')); }
+    };
+    const sc=document.createElement('script');
+    sc.src='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?sheet='
+          +encodeURIComponent(ENC_SHEET)+'&headers=1&tqx=responseHandler:'+cb;
+    sc.onerror=()=>{ delete window[cb]; sc.remove(); no(new Error('連不到資料源')); };
+    document.head.appendChild(sc);
+  });
+}
 
 function renderProfit(PROFIT){
   const P=PROFIT, k=P.kpi;
@@ -355,19 +374,21 @@ $('lockForm').addEventListener('submit',async e=>{
   const btn=$('pwBtn'), err=$('pwErr');
   btn.disabled=true; btn.textContent='解密中…'; err.textContent='';
   try{
+    if(!PROFIT_ENC) PROFIT_ENC=await fetchEnc();
     const P=await unlock($('pw').value);
     $('profitLock').remove();
     $('profitBody').hidden=false;
     renderProfit(P);
     sessionStorage.setItem('bk',$('pw').value);      // 只存本次分頁，關掉就沒了
-  }catch(_){
-    err.textContent='密碼錯誤，無法解密。';
+  }catch(e){
+    err.textContent = /密文|資料源/.test(e.message||'') ? e.message+'，請稍後再試。' : '密碼錯誤，無法解密。';
     btn.disabled=false; btn.textContent='解鎖'; $('pw').value=''; $('pw').focus();
   }
 });
 /* 同一分頁內重整不用再輸一次 */
 (async()=>{ const c=sessionStorage.getItem('bk'); if(!c)return;
-  try{ const P=await unlock(c); $('profitLock').remove(); $('profitBody').hidden=false; renderProfit(P); }
+  try{ PROFIT_ENC=await fetchEnc(); const P=await unlock(c);
+       $('profitLock').remove(); $('profitBody').hidden=false; renderProfit(P); }
   catch(_){ sessionStorage.removeItem('bk'); } })();
 </script>
 </body>
